@@ -1,15 +1,8 @@
-// This file contains the repository implementation layer.
 package repository
 
 import (
 	"database/sql"
-	"errors"
-
 	_ "github.com/lib/pq"
-)
-
-var (
-	ErrUserNotFound = errors.New("user not found")
 )
 
 type Repository struct {

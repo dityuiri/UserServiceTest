@@ -3,14 +3,6 @@ package repository
 
 import "github.com/google/uuid"
 
-type GetTestByIdInput struct {
-	Id string
-}
-
-type GetTestByIdOutput struct {
-	Name string
-}
-
 type InsertUserInput struct {
 	Id          uuid.UUID
 	PhoneNumber string

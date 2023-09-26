@@ -9,6 +9,8 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/dityuiri/UserServiceTest/common"
 )
 
 func TestRepository_GetUserByPhoneNumber(t *testing.T) {
@@ -58,7 +60,7 @@ func TestRepository_GetUserByPhoneNumber(t *testing.T) {
 			WithArgs(input.PhoneNumber).WillReturnError(sql.ErrNoRows)
 
 		output, err := repo.GetUserByPhoneNumber(ctx, input)
-		assert.EqualError(t, ErrUserNotFound, err.Error())
+		assert.EqualError(t, common.ErrUserNotFound, err.Error())
 		assert.Empty(t, output)
 	})
 
@@ -70,10 +72,10 @@ func TestRepository_GetUserByPhoneNumber(t *testing.T) {
 		)
 
 		mock.ExpectQuery("SELECT id, name FROM user WHERE phone_number = (.+)").
-			WithArgs(input.PhoneNumber).WillReturnError(errors.New(""))
+			WithArgs(input.PhoneNumber).WillReturnError(errors.New("error"))
 
 		output, err := repo.GetUserByPhoneNumber(ctx, input)
-		assert.EqualError(t, ErrUserNotFound, err.Error())
+		assert.EqualError(t, err, "error")
 		assert.Empty(t, output)
 	})
 }

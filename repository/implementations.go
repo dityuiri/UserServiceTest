@@ -3,6 +3,8 @@ package repository
 import (
 	"context"
 	"database/sql"
+
+	"github.com/dityuiri/UserServiceTest/common"
 )
 
 func (r *Repository) GetTestById(ctx context.Context, input GetTestByIdInput) (output GetTestByIdOutput, err error) {
@@ -19,7 +21,7 @@ func (r *Repository) GetUserByPhoneNumber(ctx context.Context, input GetUserByPh
 	err = r.Db.QueryRowContext(ctx, query, input.PhoneNumber).Scan(&output.Id, &output.Name)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return output, ErrUserNotFound
+			return output, common.ErrUserNotFound
 		}
 
 		return
