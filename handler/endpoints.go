@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -12,15 +11,6 @@ import (
 	"github.com/dityuiri/UserServiceTest/generated"
 	"github.com/dityuiri/UserServiceTest/repository"
 )
-
-// This is just a test endpoint to get you started. Please delete this endpoint.
-// (GET /hello)
-func (s *Server) Hello(ctx echo.Context, params generated.HelloParams) error {
-
-	var resp generated.HelloResponse
-	resp.Message = fmt.Sprintf("Hello User %d", params.Id)
-	return ctx.JSON(http.StatusOK, resp)
-}
 
 // UserRegister : POST /user/register
 func (s *Server) UserRegister(ctx echo.Context) error {
