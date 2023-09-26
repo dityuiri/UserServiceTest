@@ -16,3 +16,7 @@ func (s *Server) Hello(ctx echo.Context, params generated.HelloParams) error {
 	resp.Message = fmt.Sprintf("Hello User %d", params.Id)
 	return ctx.JSON(http.StatusOK, resp)
 }
+
+func (s *Server) UserRegister(ctx echo.Context) error {
+	return nil
+}
