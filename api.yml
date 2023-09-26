@@ -15,7 +15,7 @@ info:
   license:
     name: MIT
 servers:
-  - url: http://localhost
+  - url: http://localhost:8080
 paths:
   /hello:
     get:
@@ -31,7 +31,7 @@ paths:
         '200':
           description: Test return
           content:
-            application/json:    
+            application/json:
               schema:
                 $ref: "#/components/schemas/HelloResponse"
         '404':
@@ -40,6 +40,46 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /user/register:
+    post:
+      summary: Register user into the system based on provided information
+      operationId: user-register
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserRegisterRequest"
+            examples:
+              valid:
+                $ref: "#/components/examples/UserRegisterRequest"
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserRegisterCreatedResponse"
+              examples:
+                created:
+                  $ref: "#/components/examples/UserRegisterCreatedResponse"
+        '400':
+          description: Bad request due to validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MultipleErrorResponse"
+              examples:
+                errors:
+                  $ref: "#/components/examples/MultipleErrorResponse"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                error:
+                  $ref: "#/components/examples/ErrorResponse"
 components:
   schemas:
     HelloResponse:
@@ -49,6 +89,32 @@ components:
       properties:
         message:
           type: string
+    UserRegisterRequest:
+      type: object
+      required:
+        - phone_number
+        - full_name
+        - password
+      properties:
+        phone_number:
+          type: string
+          minLength: 10
+          maxLength: 13
+        full_name:
+          type: string
+          minLength: 3
+          maxLength: 60
+        password:
+          type: string
+          minLength: 6
+          maxLength: 64
+    UserRegisterCreatedResponse:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
     ErrorResponse:
       type: object
       required:
@@ -56,3 +122,31 @@ components:
       properties:
         message:
           type: string
+    MultipleErrorResponse:
+      type: object
+      required:
+        - messages
+      properties:
+        messages:
+          type: array
+          items:
+            type: string
+
+  examples:
+    UserRegisterRequest:
+      value:
+        phone_number: "+62858778892321"
+        full_name: "Sakino Yui"
+        password: "PuniYuiPolarBear!"
+    UserRegisterCreatedResponse:
+      value:
+        id: "7b8782ea-19fa-4a70-8893-c425e64a9d16"
+    MultipleErrorResponse:
+      value:
+        messages:
+          - "Phone numbers must start with the Indonesia country code “+62”"
+          - "Full name must be at least 3 characters"
+          - "Passwords must contain at least 1 capital letter, 1 number, and 1 special character"
+    ErrorResponse:
+      value:
+        message: "PQ error something"
