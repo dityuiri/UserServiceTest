@@ -70,7 +70,16 @@ paths:
                 $ref: "#/components/schemas/MultipleErrorResponse"
               examples:
                 errors:
-                  $ref: "#/components/examples/MultipleErrorResponse"
+                  $ref: "#/components/examples/MultipleErrorValidationResponse"
+        '422':
+          description: Unprocessable due the user already created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MultipleErrorResponse"
+              examples:
+                errors:
+                  $ref: "#/components/examples/MultipleErrorAlreadyCreatedResponse"
         '500':
           description: Internal server error
           content:
@@ -79,7 +88,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
               examples:
                 error:
-                  $ref: "#/components/examples/ErrorResponse"
+                  $ref: "#/components/examples/MultipleErrorGeneralResponse"
 components:
   schemas:
     HelloResponse:
@@ -141,12 +150,20 @@ components:
     UserRegisterCreatedResponse:
       value:
         id: "7b8782ea-19fa-4a70-8893-c425e64a9d16"
-    MultipleErrorResponse:
+    MultipleErrorValidationResponse:
       value:
         messages:
           - "Phone numbers must start with the Indonesia country code “+62”"
           - "Full name must be at least 3 characters"
           - "Passwords must contain at least 1 capital letter, 1 number, and 1 special character"
+    MultipleErrorAlreadyCreatedResponse:
+      value:
+        messages:
+          - "User already created"
+    MultipleErrorGeneralResponse:
+      value:
+        messages:
+          - "PQ error something"
     ErrorResponse:
       value:
         message: "PQ error something"

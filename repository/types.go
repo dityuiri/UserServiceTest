@@ -7,8 +7,7 @@ type InsertUserInput struct {
 	Id          uuid.UUID
 	PhoneNumber string
 	Name        string
-	Password    string
-	Salt        string
+	Password    string //hashed
 }
 
 type GetUserByPhoneNumberInput struct {

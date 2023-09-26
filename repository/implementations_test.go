@@ -41,7 +41,7 @@ func TestRepository_GetUserByPhoneNumber(t *testing.T) {
 			}
 		)
 
-		mock.ExpectQuery("SELECT id, name FROM user WHERE phone_number = (.+)").
+		mock.ExpectQuery("SELECT id, name FROM user_master WHERE phone_number = (.+)").
 			WithArgs(input.PhoneNumber).WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).AddRow(expectedOutput.Id, expectedOutput.Name))
 
 		output, err := repo.GetUserByPhoneNumber(ctx, input)
@@ -56,7 +56,7 @@ func TestRepository_GetUserByPhoneNumber(t *testing.T) {
 			}
 		)
 
-		mock.ExpectQuery("SELECT id, name FROM user WHERE phone_number = (.+)").
+		mock.ExpectQuery("SELECT id, name FROM user_master WHERE phone_number = (.+)").
 			WithArgs(input.PhoneNumber).WillReturnError(sql.ErrNoRows)
 
 		output, err := repo.GetUserByPhoneNumber(ctx, input)
@@ -71,7 +71,7 @@ func TestRepository_GetUserByPhoneNumber(t *testing.T) {
 			}
 		)
 
-		mock.ExpectQuery("SELECT id, name FROM user WHERE phone_number = (.+)").
+		mock.ExpectQuery("SELECT id, name FROM user_master WHERE phone_number = (.+)").
 			WithArgs(input.PhoneNumber).WillReturnError(errors.New("error"))
 
 		output, err := repo.GetUserByPhoneNumber(ctx, input)
@@ -103,12 +103,11 @@ func TestRepository_InsertUser(t *testing.T) {
 				Name:        "Sakino Yui",
 				PhoneNumber: "+6285320993",
 				Password:    "polarBearYui!",
-				Salt:        "utageeeshon",
 			}
 		)
 
-		mock.ExpectExec("INSERT INTO user (.+)").
-			WithArgs(input.Id, input.PhoneNumber, input.Name, input.Password, input.Salt).
+		mock.ExpectExec("INSERT INTO user_master (.+)").
+			WithArgs(input.Id, input.PhoneNumber, input.Name, input.Password).
 			WillReturnResult(sqlmock.NewResult(1, 1))
 
 		err := repo.InsertUser(ctx, input)
@@ -122,12 +121,11 @@ func TestRepository_InsertUser(t *testing.T) {
 				Name:        "Sakino Yui",
 				PhoneNumber: "+6285320993",
 				Password:    "polarBearYui!",
-				Salt:        "utageeeshon",
 			}
 		)
 
-		mock.ExpectExec("INSERT INTO user (.+)").
-			WithArgs(input.Id, input.PhoneNumber, input.Name, input.Password, input.Salt).
+		mock.ExpectExec("INSERT INTO user_master (.+)").
+			WithArgs(input.Id, input.PhoneNumber, input.Name, input.Password).
 			WillReturnError(errors.New("error"))
 
 		err := repo.InsertUser(ctx, input)
