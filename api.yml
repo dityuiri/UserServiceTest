@@ -102,7 +102,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
               examples:
                 errors:
-                  $ref: "#/components/examples/ErrorResponse"
+                  $ref: "#/components/examples/BadRequestErrorResponse"
         '500':
           description: Internal server error
           content:
@@ -111,7 +111,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
               examples:
                 error:
-                  $ref: "#/components/examples/ErrorResponse"
+                  $ref: "#/components/examples/GeneralErrorResponse"
   /user/profile:
     get:
       tags:
@@ -138,7 +138,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
               examples:
                 errors:
-                  $ref: "#/components/examples/ErrorResponse"
+                  $ref: "#/components/examples/ForbiddenErrorResponse"
         '500':
           description: Internal server error
           content:
@@ -147,7 +147,52 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
               examples:
                 error:
-                  $ref: "#/components/examples/ErrorResponse"
+                  $ref: "#/components/examples/GeneralErrorResponse"
+    patch:
+      tags:
+        - User
+      summary: Update phone number or name of a user
+      operationId: update-user-profile
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserProfileRequest"
+            examples:
+              valid:
+                $ref: "#/components/examples/UpdateUserProfileRequest"
+      responses:
+        '204':
+          description: The update is success
+        '403':
+          description: Forbidden code due to unauthorized token access
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                errors:
+                  $ref: "#/components/examples/ForbiddenErrorResponse"
+        '409':
+          description: Conflict when user trying to change phone number with existing phone number
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                errors:
+                  $ref: "#/components/examples/ConflictErrorResponse"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                error:
+                  $ref: "#/components/examples/GeneralErrorResponse"
 
 
 components:
@@ -157,6 +202,13 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    UpdateUserProfileRequest:
+      type: object
+      properties:
+        full_name:
+          type: string
+        phone_number:
+          type: string
     GetUserProfileResponse:
       type: object
       required:
@@ -235,6 +287,10 @@ components:
             type: string
 
   examples:
+    UpdateUserProfileRequest:
+      value:
+        phone_number: "+62858778892322"
+        name: "Kurumi Ruru"
     GetUserProfileResponse:
       value:
         phone_number: "+62858778892321"
@@ -269,6 +325,15 @@ components:
       value:
         messages:
           - "PQ error something"
-    ErrorResponse:
+    ConflictErrorResponse:
+      value:
+        message: "phone number exists"
+    BadRequestErrorResponse:
+      value:
+        message: "invalid request body"
+    ForbiddenErrorResponse:
+      value:
+        message: "invalid token"
+    GeneralErrorResponse:
       value:
         message: "something error"
