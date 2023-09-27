@@ -11,7 +11,8 @@ CREATE INDEX idx_user_phone_number ON user_master(phone_number);
 
 CREATE TABLE IF NOT EXISTS user_login (
     user_id         UUID   PRIMARY KEY,
-    successful_login INT   DEFAULT 0
+    successful_login INT   NOT NULL DEFAULT 0,
+    last_login_at    TIMESTAMP NOT NULL DEFAULT now()
 );
 
 

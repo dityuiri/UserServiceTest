@@ -42,7 +42,7 @@ func (r *Repository) UpdateUserLogin(ctx context.Context, input UpdateUserLoginI
 	var query = `
 		UPDATE user_login
 		SET
-			successful_login = $2
+			successful_login = $2, last_login_at = NOW()
 		WHERE
 			user_id = $1
 	`
