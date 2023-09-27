@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"github.com/go-playground/validator/v10"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
@@ -12,6 +14,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/labstack/echo/v4"
@@ -39,6 +42,18 @@ func initializeTestEchoServer(repo repository.RepositoryInterface) (generated.Se
 	}()
 
 	return server, e, &wg
+}
+
+func generateNewToken(id string, key string) string {
+	expirationTime := time.Now().Add(2 * time.Minute)
+	claims := &jwt.MapClaims{
+		"id":  id,
+		"exp": jwt.NewNumericDate(expirationTime),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, _ := token.SignedString([]byte(key))
+	return tokenString
 }
 
 func TestUserRegister(t *testing.T) {
@@ -308,6 +323,115 @@ func TestUserLogin(t *testing.T) {
 				NumOfSuccessfulLogin: userOutput.NumOfSuccessfulLogin.Int32 + 1}).Return(errors.New("error")).Times(1)
 
 		if assert.NoError(t, sv.UserLogin(c)) {
+			assert.Equal(t, http.StatusInternalServerError, rec.Code)
+			assert.NotEmpty(t, rec.Body.String())
+		}
+	})
+
+	_ = e.Shutdown(context.Background())
+	wg.Wait()
+}
+
+func TestGetUserProfile(t *testing.T) {
+	var (
+		mockCtrl       = gomock.NewController(t)
+		mockRepository = repository.NewMockRepositoryInterface(mockCtrl)
+
+		userId    = uuid.New()
+		userInput = repository.GetUserByIdInput{
+			Id: userId.String(),
+		}
+
+		userOutput = repository.GetUserByIdOutput{
+			Id:          userId,
+			Name:        "Kurumi Ruru",
+			PhoneNumber: "628788889999",
+		}
+	)
+
+	sv, e, wg := initializeTestEchoServer(mockRepository)
+
+	t.Run("all ok", func(t *testing.T) {
+		generatedToken := generateNewToken(userId.String(), "key")
+		req := httptest.NewRequest(http.MethodGet, "/user/profile", nil)
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", generatedToken))
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		mockRepository.EXPECT().GetUserById(gomock.Any(), userInput).Return(userOutput, nil).Times(1)
+
+		if assert.NoError(t, sv.GetUserProfile(c)) {
+			assert.Equal(t, http.StatusOK, rec.Code)
+			assert.NotEmpty(t, rec.Body.String())
+		}
+	})
+
+	t.Run("empty token", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/user/profile", nil)
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		if assert.NoError(t, sv.GetUserProfile(c)) {
+			assert.Equal(t, http.StatusForbidden, rec.Code)
+			assert.NotEmpty(t, rec.Body.String())
+		}
+	})
+
+	t.Run("invalid header format", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/user/profile", nil)
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		req.Header.Set("Authorization", fmt.Sprintf("Bear %s", "random"))
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		if assert.NoError(t, sv.GetUserProfile(c)) {
+			assert.Equal(t, http.StatusForbidden, rec.Code)
+			assert.NotEmpty(t, rec.Body.String())
+		}
+	})
+
+	t.Run("invalid token", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/user/profile", nil)
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", "random"))
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		if assert.NoError(t, sv.GetUserProfile(c)) {
+			assert.Equal(t, http.StatusForbidden, rec.Code)
+			assert.NotEmpty(t, rec.Body.String())
+		}
+	})
+
+	t.Run("get user by id not found", func(t *testing.T) {
+		generatedToken := generateNewToken(userId.String(), "key")
+		req := httptest.NewRequest(http.MethodGet, "/user/profile", nil)
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", generatedToken))
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		mockRepository.EXPECT().GetUserById(gomock.Any(), userInput).Return(repository.GetUserByIdOutput{}, common.ErrUserNotFound).Times(1)
+
+		if assert.NoError(t, sv.GetUserProfile(c)) {
+			assert.Equal(t, http.StatusForbidden, rec.Code)
+			assert.NotEmpty(t, rec.Body.String())
+		}
+	})
+
+	t.Run("get user by id return error", func(t *testing.T) {
+		generatedToken := generateNewToken(userId.String(), "key")
+		req := httptest.NewRequest(http.MethodGet, "/user/profile", nil)
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", generatedToken))
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		mockRepository.EXPECT().GetUserById(gomock.Any(), userInput).Return(repository.GetUserByIdOutput{}, errors.New("error")).Times(1)
+
+		if assert.NoError(t, sv.GetUserProfile(c)) {
 			assert.Equal(t, http.StatusInternalServerError, rec.Code)
 			assert.NotEmpty(t, rec.Body.String())
 		}

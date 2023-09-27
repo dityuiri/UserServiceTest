@@ -125,7 +125,7 @@ func (s *Server) UserLogin(ctx echo.Context) error {
 			})
 		}
 
-		ctx.Logger().Errorf("GetUserLogin error: %s", err.Error())
+		ctx.Logger().Errorf("GetUserByPhoneNumber error: %s", err.Error())
 		return ctx.JSON(http.StatusInternalServerError, generated.ErrorResponse{
 			Message: err.Error(),
 		})
@@ -171,5 +171,50 @@ func (s *Server) UserLogin(ctx echo.Context) error {
 
 	resp.Id = user.Id.String()
 	resp.Token = token
+	return ctx.JSON(http.StatusOK, resp)
+}
+
+// GetUserProfile : GET /user/profile
+func (s *Server) GetUserProfile(ctx echo.Context) error {
+	var (
+		resp        generated.GetUserProfileResponse
+		standardCtx = ctx.Request().Context()
+	)
+
+	// Get JWT token from "Authorization" header
+	token, err := s.retrieveJWTToken(ctx)
+	if err != nil {
+		return ctx.JSON(http.StatusForbidden, generated.ErrorResponse{
+			Message: err.Error(),
+		})
+	}
+
+	// Get ID from JWT token
+	userId, err := s.getIdFromJWTToken(token)
+	if err != nil {
+		return ctx.JSON(http.StatusForbidden, generated.ErrorResponse{
+			Message: err.Error(),
+		})
+	}
+
+	// Get user profile
+	getUserInput := repository.GetUserByIdInput{Id: userId}
+	user, err := s.Repository.GetUserById(standardCtx, getUserInput)
+	if err != nil {
+		if err == common.ErrUserNotFound {
+			// Follow the specification to return it as 403
+			return ctx.JSON(http.StatusForbidden, generated.ErrorResponse{
+				Message: err.Error(),
+			})
+		}
+
+		ctx.Logger().Errorf("GetUserLogin error: %s", err.Error())
+		return ctx.JSON(http.StatusInternalServerError, generated.ErrorResponse{
+			Message: err.Error(),
+		})
+	}
+
+	resp.Name = user.Name
+	resp.PhoneNumber = user.PhoneNumber
 	return ctx.JSON(http.StatusOK, resp)
 }
