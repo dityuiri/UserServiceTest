@@ -178,6 +178,29 @@ func TestUserRegister(t *testing.T) {
 		}
 	})
 
+	t.Run("generate hash from password returning error", func(t *testing.T) {
+		reqBody := `{"full_name": "Haga Uruna", "password": "Pass123!", "phone_number": "+62123456789"}`
+		req := httptest.NewRequest(http.MethodPost, "/user/register", strings.NewReader(reqBody))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		mockRepository.EXPECT().GetUserByPhoneNumber(gomock.Any(), repository.GetUserByPhoneNumberInput{PhoneNumber: "+62123456789"}).
+			Return(repository.GetUserByPhoneNumberOutput{}, common.ErrUserNotFound).Times(1)
+
+		// patch generate from password
+		tempFunc := GenerateFromPassword
+		GenerateFromPassword = func(password []byte, cost int) ([]byte, error) {
+			return []byte(""), errors.New("error")
+		}
+		defer func() { GenerateFromPassword = tempFunc }()
+
+		if assert.NoError(t, sv.UserRegister(c)) {
+			assert.Equal(t, http.StatusInternalServerError, rec.Code)
+			assert.NotEmpty(t, rec.Body.String())
+		}
+	})
+
 	t.Run("insert user return error", func(t *testing.T) {
 		reqBody := `{"full_name": "Haga Uruna", "password": "Pass123!", "phone_number": "+62123456789"}`
 		req := httptest.NewRequest(http.MethodPost, "/user/register", strings.NewReader(reqBody))
@@ -306,6 +329,27 @@ func TestUserLogin(t *testing.T) {
 
 		if assert.NoError(t, sv.UserLogin(c)) {
 			assert.Equal(t, http.StatusBadRequest, rec.Code)
+			assert.NotEmpty(t, rec.Body.String())
+		}
+	})
+
+	t.Run("compare hash anda password returning error", func(t *testing.T) {
+		reqBody := `{"password": "correctPassword123!", "phone_number": "+62123456789"}`
+		req := httptest.NewRequest(http.MethodPost, "/user/login", strings.NewReader(reqBody))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		mockRepository.EXPECT().GetUserByPhoneNumber(gomock.Any(), userInput).Return(userOutput, nil).Times(1)
+		// patch
+		tempFunc := CompareHashAndPassword
+		CompareHashAndPassword = func(hashedPassword, password []byte) error {
+			return errors.New("error")
+		}
+		defer func() { CompareHashAndPassword = tempFunc }()
+
+		if assert.NoError(t, sv.UserLogin(c)) {
+			assert.Equal(t, http.StatusInternalServerError, rec.Code)
 			assert.NotEmpty(t, rec.Body.String())
 		}
 	})

@@ -54,7 +54,7 @@ func (s *Server) UserRegister(ctx echo.Context) error {
 		// Normal case is when user isn't exist in the database
 		if err == common.ErrUserNotFound {
 			// Hash and Salt the password
-			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+			hashedPassword, err := GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 			if err != nil {
 				ctx.Logger().Errorf("hashPassword error: %s", err.Error())
 				return ctx.JSON(http.StatusInternalServerError, generated.MultipleErrorResponse{
@@ -132,7 +132,7 @@ func (s *Server) UserLogin(ctx echo.Context) error {
 	}
 
 	// Compare supplied password with the user password
-	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password))
+	err = CompareHashAndPassword([]byte(user.Password), []byte(req.Password))
 	if err != nil {
 		if err == bcrypt.ErrMismatchedHashAndPassword {
 			return ctx.JSON(http.StatusBadRequest, generated.ErrorResponse{
