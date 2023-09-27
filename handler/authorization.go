@@ -25,6 +25,21 @@ func (s *Server) generateJWTToken(id string) (string, error) {
 	return tokenString, nil
 }
 
+func (s *Server) retrieveAndGetIdFromJWTToken(ctx echo.Context) (string, error) {
+	token, err := s.retrieveJWTToken(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	// Get ID from JWT token
+	userId, err := s.getIdFromJWTToken(token)
+	if err != nil {
+		return "", err
+	}
+
+	return userId, nil
+}
+
 func (s *Server) retrieveJWTToken(c echo.Context) (string, error) {
 	authHeader := c.Request().Header.Get("Authorization")
 

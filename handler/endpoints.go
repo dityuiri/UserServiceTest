@@ -181,16 +181,8 @@ func (s *Server) GetUserProfile(ctx echo.Context) error {
 		standardCtx = ctx.Request().Context()
 	)
 
-	// Get JWT token from "Authorization" header
-	token, err := s.retrieveJWTToken(ctx)
-	if err != nil {
-		return ctx.JSON(http.StatusForbidden, generated.ErrorResponse{
-			Message: err.Error(),
-		})
-	}
-
-	// Get ID from JWT token
-	userId, err := s.getIdFromJWTToken(token)
+	// Retrieve and Get ID from JWT Token
+	userId, err := s.retrieveAndGetIdFromJWTToken(ctx)
 	if err != nil {
 		return ctx.JSON(http.StatusForbidden, generated.ErrorResponse{
 			Message: err.Error(),
@@ -208,7 +200,7 @@ func (s *Server) GetUserProfile(ctx echo.Context) error {
 			})
 		}
 
-		ctx.Logger().Errorf("GetUserLogin error: %s", err.Error())
+		ctx.Logger().Errorf("GetUserById error: %s", err.Error())
 		return ctx.JSON(http.StatusInternalServerError, generated.ErrorResponse{
 			Message: err.Error(),
 		})
@@ -216,5 +208,114 @@ func (s *Server) GetUserProfile(ctx echo.Context) error {
 
 	resp.Name = user.Name
 	resp.PhoneNumber = user.PhoneNumber
+	return ctx.JSON(http.StatusOK, resp)
+}
+
+// UpdateUserProfile : PATCH /user/profile
+func (s *Server) UpdateUserProfile(ctx echo.Context) error {
+	var (
+		req         generated.UpdateUserProfileRequest
+		resp        generated.SuccessMessageResponse
+		standardCtx = ctx.Request().Context()
+	)
+
+	// Retrieve and Get ID from JWT Token
+	userId, err := s.retrieveAndGetIdFromJWTToken(ctx)
+	if err != nil {
+		return ctx.JSON(http.StatusForbidden, generated.ErrorResponse{
+			Message: err.Error(),
+		})
+	}
+
+	// Retrieve request body
+	if err = ctx.Bind(&req); err != nil {
+		return ctx.JSON(http.StatusBadRequest, generated.ErrorResponse{
+			Message: "Invalid request body",
+		})
+	}
+
+	// Check if both of the fields are empty
+	if req.PhoneNumber == nil && req.FullName == nil {
+		return ctx.JSON(http.StatusBadRequest, generated.ErrorResponse{
+			Message: "Empty request body",
+		})
+	}
+
+	// Get user by id to get current profile of the user
+	getUserInput := repository.GetUserByIdInput{Id: userId}
+	user, err := s.Repository.GetUserById(standardCtx, getUserInput)
+	if err != nil {
+		if err == common.ErrUserNotFound {
+			// Follow the specification to return it as 403
+			return ctx.JSON(http.StatusForbidden, generated.ErrorResponse{
+				Message: err.Error(),
+			})
+		}
+
+		ctx.Logger().Errorf("GetUserById error: %s", err.Error())
+		return ctx.JSON(http.StatusInternalServerError, generated.ErrorResponse{
+			Message: err.Error(),
+		})
+	}
+
+	// Pre-fill input for update user with existing profile
+	updateUserInput := repository.UpdateUserInput{
+		Id:          userId,
+		PhoneNumber: user.PhoneNumber,
+		Name:        user.Name,
+	}
+
+	// Check if any changes happen to the current one
+	var isPhoneChanged, isNameChanged bool
+	if req.PhoneNumber != nil {
+		if user.PhoneNumber != *req.PhoneNumber {
+			isPhoneChanged = true
+		}
+
+		updateUserInput.PhoneNumber = *req.PhoneNumber
+	}
+
+	if req.FullName != nil {
+		if user.Name != *req.FullName {
+			isNameChanged = true
+			updateUserInput.Name = *req.FullName
+		}
+	}
+
+	// Return no content if no changes happened
+	if !isPhoneChanged && !isNameChanged {
+		return ctx.JSON(http.StatusNoContent, nil)
+	}
+
+	// If phone number changed, check for existing user
+	if isPhoneChanged {
+		getUserByPhoneInput := repository.GetUserByPhoneNumberInput{PhoneNumber: *req.PhoneNumber}
+		existingUser, err := s.Repository.GetUserByPhoneNumber(standardCtx, getUserByPhoneInput)
+		// Return for other errors
+		if err != nil && err != common.ErrUserNotFound {
+			ctx.Logger().Errorf("GetUserByPhoneNumber error: %s", err.Error())
+			return ctx.JSON(http.StatusInternalServerError, generated.ErrorResponse{
+				Message: err.Error(),
+			})
+		}
+
+		// Return conflict status code
+		if err == nil && existingUser.Name != "" {
+			return ctx.JSON(http.StatusConflict, generated.ErrorResponse{
+				Message: "phone number exists",
+			})
+		}
+	}
+
+	// Continue the update process
+	err = s.Repository.UpdateUser(standardCtx, updateUserInput)
+	if err != nil {
+		ctx.Logger().Errorf("UpdateUser error: %s", err.Error())
+		return ctx.JSON(http.StatusInternalServerError, generated.ErrorResponse{
+			Message: err.Error(),
+		})
+	}
+
+	resp.Message = "changes applied successfully"
 	return ctx.JSON(http.StatusOK, resp)
 }

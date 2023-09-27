@@ -164,8 +164,26 @@ paths:
               valid:
                 $ref: "#/components/examples/UpdateUserProfileRequest"
       responses:
+        '200':
+          description: Successfully updated the profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessMessageResponse"
+              examples:
+                error:
+                  $ref: "#/components/examples/SuccessMessageResponse"
         '204':
-          description: The update is success
+          description: No changes happened
+        '400':
+          description: Wrong request body format
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                errors:
+                  $ref: "#/components/examples/BadRequestErrorResponse"
         '403':
           description: Forbidden code due to unauthorized token access
           content:
@@ -276,6 +294,13 @@ components:
       properties:
         message:
           type: string
+    SuccessMessageResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
     MultipleErrorResponse:
       type: object
       required:
@@ -320,11 +345,11 @@ components:
     MultipleErrorAlreadyCreatedResponse:
       value:
         messages:
-          - "User already created"
+          - "user already created"
     MultipleErrorGeneralResponse:
       value:
         messages:
-          - "PQ error something"
+          - "pq error something"
     ConflictErrorResponse:
       value:
         message: "phone number exists"
@@ -337,3 +362,6 @@ components:
     GeneralErrorResponse:
       value:
         message: "something error"
+    SuccessMessageResponse:
+      value:
+        message: "changes applied successfully"

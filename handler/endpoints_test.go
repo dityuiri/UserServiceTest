@@ -5,10 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/go-playground/validator/v10"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -16,9 +12,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-playground/validator/v10"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/golang/mock/gomock"
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/dityuiri/UserServiceTest/common"
 	"github.com/dityuiri/UserServiceTest/generated"
@@ -133,7 +133,7 @@ func TestUserRegister(t *testing.T) {
 		}
 	})
 
-	t.Run("invalid password rule - no specail character", func(t *testing.T) {
+	t.Run("invalid password rule - no special character", func(t *testing.T) {
 		reqBody := `{"full_name": "Ha", "password": "Hagasaurus12", "phone_number": "+6780909080123"}`
 		req := httptest.NewRequest(http.MethodPost, "/user/register", strings.NewReader(reqBody))
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
@@ -432,6 +432,262 @@ func TestGetUserProfile(t *testing.T) {
 		mockRepository.EXPECT().GetUserById(gomock.Any(), userInput).Return(repository.GetUserByIdOutput{}, errors.New("error")).Times(1)
 
 		if assert.NoError(t, sv.GetUserProfile(c)) {
+			assert.Equal(t, http.StatusInternalServerError, rec.Code)
+			assert.NotEmpty(t, rec.Body.String())
+		}
+	})
+
+	_ = e.Shutdown(context.Background())
+	wg.Wait()
+}
+
+func TestUpdateUserProfile(t *testing.T) {
+	var (
+		mockCtrl       = gomock.NewController(t)
+		mockRepository = repository.NewMockRepositoryInterface(mockCtrl)
+
+		userId    = uuid.New()
+		userInput = repository.GetUserByIdInput{
+			Id: userId.String(),
+		}
+
+		userOutput = repository.GetUserByIdOutput{
+			Id:          userId,
+			Name:        "Kurumi Ruru",
+			PhoneNumber: "628788889999",
+		}
+	)
+
+	sv, e, wg := initializeTestEchoServer(mockRepository)
+
+	t.Run("all ok", func(t *testing.T) {
+		generatedToken := generateNewToken(userId.String(), "key")
+		reqBody := `{"full_name": "Mirapa Ruru", "phone_number": "+6212345678219"}`
+		req := httptest.NewRequest(http.MethodPatch, "/user/profile", strings.NewReader(reqBody))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", generatedToken))
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		updateUserInput := repository.UpdateUserInput{
+			Id:          userOutput.Id.String(),
+			Name:        "Mirapa Ruru",
+			PhoneNumber: "+6212345678219",
+		}
+
+		userPhoneInput := repository.GetUserByPhoneNumberInput{
+			PhoneNumber: updateUserInput.PhoneNumber,
+		}
+
+		mockRepository.EXPECT().GetUserById(gomock.Any(), userInput).Return(userOutput, nil).Times(1)
+		mockRepository.EXPECT().GetUserByPhoneNumber(gomock.Any(), userPhoneInput).Return(repository.GetUserByPhoneNumberOutput{}, common.ErrUserNotFound).Times(1)
+		mockRepository.EXPECT().UpdateUser(gomock.Any(), updateUserInput).Return(nil).Times(1)
+
+		if assert.NoError(t, sv.UpdateUserProfile(c)) {
+			assert.Equal(t, http.StatusOK, rec.Code)
+			assert.NotEmpty(t, rec.Body.String())
+		}
+	})
+
+	t.Run("empty token", func(t *testing.T) {
+		reqBody := `{"full_name": "Mirapa Ruru", "phone_number": "+6212345678219"}`
+		req := httptest.NewRequest(http.MethodPatch, "/user/profile", strings.NewReader(reqBody))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		if assert.NoError(t, sv.UpdateUserProfile(c)) {
+			assert.Equal(t, http.StatusForbidden, rec.Code)
+			assert.NotEmpty(t, rec.Body.String())
+		}
+	})
+
+	t.Run("invalid header format", func(t *testing.T) {
+		reqBody := `{"full_name": "Mirapa Ruru", "phone_number": "+6212345678219"}`
+		req := httptest.NewRequest(http.MethodPatch, "/user/profile", strings.NewReader(reqBody))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", "random"))
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		if assert.NoError(t, sv.UpdateUserProfile(c)) {
+			assert.Equal(t, http.StatusForbidden, rec.Code)
+			assert.NotEmpty(t, rec.Body.String())
+		}
+	})
+
+	t.Run("invalid request body", func(t *testing.T) {
+		generatedToken := generateNewToken(userId.String(), "key")
+		reqBody := `{"invalid"}`
+		req := httptest.NewRequest(http.MethodPatch, "/user/profile", strings.NewReader(reqBody))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", generatedToken))
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		if assert.NoError(t, sv.UpdateUserProfile(c)) {
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
+			assert.NotEmpty(t, rec.Body.String())
+		}
+	})
+
+	t.Run("empty request body", func(t *testing.T) {
+		generatedToken := generateNewToken(userId.String(), "key")
+		reqBody := `{}`
+		req := httptest.NewRequest(http.MethodPatch, "/user/profile", strings.NewReader(reqBody))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", generatedToken))
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		if assert.NoError(t, sv.UpdateUserProfile(c)) {
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
+			assert.NotEmpty(t, rec.Body.String())
+		}
+	})
+
+	t.Run("user not found", func(t *testing.T) {
+		generatedToken := generateNewToken(userId.String(), "key")
+		reqBody := `{"full_name": "Mirapa Ruru", "phone_number": "+6212345678219"}`
+		req := httptest.NewRequest(http.MethodPatch, "/user/profile", strings.NewReader(reqBody))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", generatedToken))
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		mockRepository.EXPECT().GetUserById(gomock.Any(), userInput).Return(userOutput, common.ErrUserNotFound).Times(1)
+
+		if assert.NoError(t, sv.UpdateUserProfile(c)) {
+			assert.Equal(t, http.StatusForbidden, rec.Code)
+			assert.NotEmpty(t, rec.Body.String())
+		}
+	})
+
+	t.Run("get user by id returning error", func(t *testing.T) {
+		generatedToken := generateNewToken(userId.String(), "key")
+		reqBody := `{"full_name": "Mirapa Ruru", "phone_number": "+6212345678219"}`
+		req := httptest.NewRequest(http.MethodPatch, "/user/profile", strings.NewReader(reqBody))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", generatedToken))
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		mockRepository.EXPECT().GetUserById(gomock.Any(), userInput).Return(userOutput, errors.New("error")).Times(1)
+
+		if assert.NoError(t, sv.UpdateUserProfile(c)) {
+			assert.Equal(t, http.StatusInternalServerError, rec.Code)
+			assert.NotEmpty(t, rec.Body.String())
+		}
+	})
+
+	t.Run("no changes", func(t *testing.T) {
+		generatedToken := generateNewToken(userId.String(), "key")
+		reqBody := `{"full_name": "Mirapa Ruru", "phone_number": "+6212345678219"}`
+		req := httptest.NewRequest(http.MethodPatch, "/user/profile", strings.NewReader(reqBody))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", generatedToken))
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		updateUserInput := repository.UpdateUserInput{
+			Id:          userOutput.Id.String(),
+			Name:        "Mirapa Ruru",
+			PhoneNumber: "+6212345678219",
+		}
+
+		noChangesUserOutput := repository.GetUserByIdOutput{
+			Id:          userId,
+			Name:        updateUserInput.Name,
+			PhoneNumber: updateUserInput.PhoneNumber,
+		}
+
+		mockRepository.EXPECT().GetUserById(gomock.Any(), userInput).Return(noChangesUserOutput, nil).Times(1)
+
+		if assert.NoError(t, sv.UpdateUserProfile(c)) {
+			assert.Equal(t, http.StatusNoContent, rec.Code)
+		}
+	})
+
+	t.Run("get user by phone number return error", func(t *testing.T) {
+		generatedToken := generateNewToken(userId.String(), "key")
+		reqBody := `{"full_name": "Mirapa Ruru", "phone_number": "+6212345678219"}`
+		req := httptest.NewRequest(http.MethodPatch, "/user/profile", strings.NewReader(reqBody))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", generatedToken))
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		updateUserInput := repository.UpdateUserInput{
+			Id:          userOutput.Id.String(),
+			Name:        "Mirapa Ruru",
+			PhoneNumber: "+6212345678219",
+		}
+
+		userPhoneInput := repository.GetUserByPhoneNumberInput{
+			PhoneNumber: updateUserInput.PhoneNumber,
+		}
+
+		mockRepository.EXPECT().GetUserById(gomock.Any(), userInput).Return(userOutput, nil).Times(1)
+		mockRepository.EXPECT().GetUserByPhoneNumber(gomock.Any(), userPhoneInput).Return(repository.GetUserByPhoneNumberOutput{}, errors.New("error")).Times(1)
+
+		if assert.NoError(t, sv.UpdateUserProfile(c)) {
+			assert.Equal(t, http.StatusInternalServerError, rec.Code)
+			assert.NotEmpty(t, rec.Body.String())
+		}
+	})
+
+	t.Run("existing user with phone number found", func(t *testing.T) {
+		generatedToken := generateNewToken(userId.String(), "key")
+		reqBody := `{"full_name": "Mirapa Ruru", "phone_number": "+6212345678219"}`
+		req := httptest.NewRequest(http.MethodPatch, "/user/profile", strings.NewReader(reqBody))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", generatedToken))
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		updateUserInput := repository.UpdateUserInput{
+			Id:          userOutput.Id.String(),
+			Name:        "Mirapa Ruru",
+			PhoneNumber: "+6212345678219",
+		}
+
+		userPhoneInput := repository.GetUserByPhoneNumberInput{
+			PhoneNumber: updateUserInput.PhoneNumber,
+		}
+
+		mockRepository.EXPECT().GetUserById(gomock.Any(), userInput).Return(userOutput, nil).Times(1)
+		mockRepository.EXPECT().GetUserByPhoneNumber(gomock.Any(), userPhoneInput).Return(repository.GetUserByPhoneNumberOutput{Name: "Haga Uruna"}, nil).Times(1)
+
+		if assert.NoError(t, sv.UpdateUserProfile(c)) {
+			assert.Equal(t, http.StatusConflict, rec.Code)
+			assert.NotEmpty(t, rec.Body.String())
+		}
+	})
+
+	t.Run("update user returning error", func(t *testing.T) {
+		generatedToken := generateNewToken(userId.String(), "key")
+		reqBody := `{"full_name": "Mirapa Ruru", "phone_number": "+6212345678219"}`
+		req := httptest.NewRequest(http.MethodPatch, "/user/profile", strings.NewReader(reqBody))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", generatedToken))
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		updateUserInput := repository.UpdateUserInput{
+			Id:          userOutput.Id.String(),
+			Name:        "Mirapa Ruru",
+			PhoneNumber: "+6212345678219",
+		}
+
+		userPhoneInput := repository.GetUserByPhoneNumberInput{
+			PhoneNumber: updateUserInput.PhoneNumber,
+		}
+
+		mockRepository.EXPECT().GetUserById(gomock.Any(), userInput).Return(userOutput, nil).Times(1)
+		mockRepository.EXPECT().GetUserByPhoneNumber(gomock.Any(), userPhoneInput).Return(repository.GetUserByPhoneNumberOutput{}, common.ErrUserNotFound).Times(1)
+		mockRepository.EXPECT().UpdateUser(gomock.Any(), updateUserInput).Return(errors.New("error")).Times(1)
+
+		if assert.NoError(t, sv.UpdateUserProfile(c)) {
 			assert.Equal(t, http.StatusInternalServerError, rec.Code)
 			assert.NotEmpty(t, rec.Body.String())
 		}
