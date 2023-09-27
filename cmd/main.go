@@ -7,14 +7,15 @@ import (
 	"github.com/dityuiri/UserServiceTest/handler"
 	"github.com/dityuiri/UserServiceTest/repository"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 )
 
 func main() {
 	e := echo.New()
+	e.Validator = &handler.UserRegistrationValidator{Validator: setupValidator()}
 
 	var server generated.ServerInterface = newServer()
-
 	generated.RegisterHandlers(e, server)
 	e.Logger.Fatal(e.Start(":1323"))
 }
@@ -28,4 +29,11 @@ func newServer() *handler.Server {
 		Repository: repo,
 	}
 	return handler.NewServer(opts)
+}
+
+func setupValidator() *validator.Validate {
+	validate := validator.New()
+	_ = validate.RegisterValidation("password", handler.ValidatePassword)
+
+	return validate
 }

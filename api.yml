@@ -16,9 +16,13 @@ info:
     name: MIT
 servers:
   - url: http://localhost:8080
+tags:
+  - name: User
 paths:
   /user/register:
     post:
+      tags:
+        - User
       summary: Register user into the system based on provided information
       operationId: user-register
       requestBody:
@@ -84,16 +88,16 @@ components:
       properties:
         phone_number:
           type: string
-          minLength: 10
-          maxLength: 13
+          x-oapi-codegen-extra-tags:
+            validate: required,min=10,max=13,startswith=+62
         full_name:
           type: string
-          minLength: 3
-          maxLength: 60
+          x-oapi-codegen-extra-tags:
+            validate: required,min=3,max=60
         password:
           type: string
-          minLength: 6
-          maxLength: 64
+          x-oapi-codegen-extra-tags:
+            validate: required,password
     UserRegisterCreatedResponse:
       type: object
       required:

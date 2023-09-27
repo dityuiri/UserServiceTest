@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"golang.org/x/crypto/bcrypt"
@@ -29,12 +30,22 @@ func (s *Server) UserRegister(ctx echo.Context) error {
 	}
 
 	// Field validation
+	err := ctx.Validate(req)
+	if err != nil {
+		if validationErrors, ok := err.(validator.ValidationErrors); ok {
+			errMessages := TranslateErrorMessages(validationErrors)
+			return ctx.JSON(http.StatusBadRequest, generated.MultipleErrorResponse{
+				Messages: errMessages,
+			})
+		}
+	}
 
 	// Validate if user already created
 	getUserInput := repository.GetUserByPhoneNumberInput{PhoneNumber: req.PhoneNumber}
-	_, err := s.Repository.GetUserByPhoneNumber(standardCtx, getUserInput)
+	_, err = s.Repository.GetUserByPhoneNumber(standardCtx, getUserInput)
 	if err != nil {
 		if err != common.ErrUserNotFound {
+			ctx.Logger().Errorf("GetUserByPhoneNumber error: %s", err.Error())
 			return ctx.JSON(http.StatusInternalServerError, generated.MultipleErrorResponse{
 				Messages: []string{err.Error()},
 			})
@@ -45,6 +56,7 @@ func (s *Server) UserRegister(ctx echo.Context) error {
 			// Hash and Salt the password
 			hashedPassword, err := s.hashPassword(req.Password)
 			if err != nil {
+				ctx.Logger().Errorf("hashPassword error: %s", err.Error())
 				return ctx.JSON(http.StatusInternalServerError, generated.MultipleErrorResponse{
 					Messages: []string{err.Error()},
 				})
@@ -60,6 +72,7 @@ func (s *Server) UserRegister(ctx echo.Context) error {
 
 			err = s.Repository.InsertUser(standardCtx, insertUserInput)
 			if err != nil {
+				ctx.Logger().Errorf("InsertUser error: %s", err.Error())
 				return ctx.JSON(http.StatusInternalServerError, generated.MultipleErrorResponse{
 					Messages: []string{err.Error()},
 				})
