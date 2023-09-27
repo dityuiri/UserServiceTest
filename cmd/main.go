@@ -26,7 +26,8 @@ func newServer() *handler.Server {
 		Dsn: dbDsn,
 	})
 	opts := handler.NewServerOptions{
-		Repository: repo,
+		JWTSecretKey: os.Getenv("JWT_SECRET_KEY"),
+		Repository:   repo,
 	}
 	return handler.NewServer(opts)
 }

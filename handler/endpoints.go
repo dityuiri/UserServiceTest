@@ -2,8 +2,10 @@ package handler
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"golang.org/x/crypto/bcrypt"
@@ -146,6 +148,15 @@ func (s *Server) UserLogin(ctx echo.Context) error {
 		})
 	}
 
+	// Generate JWT token
+	token, err := s.generateJWTToken(user)
+	if err != nil {
+		ctx.Logger().Errorf("generateJWTToken error: %s", err.Error())
+		return ctx.JSON(http.StatusInternalServerError, generated.ErrorResponse{
+			Message: err.Error(),
+		})
+	}
+
 	// Increment successful login
 	updateUserLoginInput := repository.UpsertUserLoginInput{
 		UserId:               user.Id,
@@ -160,8 +171,8 @@ func (s *Server) UserLogin(ctx echo.Context) error {
 		})
 	}
 
-	// TODO: Implement JWT token
 	resp.Id = user.Id.String()
+	resp.Token = token
 	return ctx.JSON(http.StatusOK, resp)
 }
 
@@ -172,4 +183,23 @@ func (s *Server) hashPassword(pass string) (string, error) {
 	}
 
 	return string(hashedPassword), nil
+}
+
+func (s *Server) generateJWTToken(user repository.GetUserByPhoneNumberOutput) (string, error) {
+	// By default, set the expiration time for 3 minutes
+	expirationTime := time.Now().Add(3 * time.Minute)
+	claims := &jwt.MapClaims{
+		"Id": user.Id.String(),
+		"RegisteredClaims": jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(expirationTime),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString([]byte(s.JWTSecretKey))
+	if err != nil {
+		return "", err
+	}
+
+	return tokenString, nil
 }

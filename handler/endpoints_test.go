@@ -27,7 +27,7 @@ func initializeTestEchoServer(repo repository.RepositoryInterface) (generated.Se
 	validate := validator.New()
 	_ = validate.RegisterValidation("password", ValidatePassword)
 	e.Validator = &UserRegistrationValidator{Validator: validate}
-	var server generated.ServerInterface = &Server{Repository: repo}
+	var server generated.ServerInterface = &Server{JWTSecretKey: "key", Repository: repo}
 	generated.RegisterHandlers(e, server)
 
 	var wg sync.WaitGroup

@@ -5,6 +5,9 @@ services:
       - "8080:1323"
     environment:
       DATABASE_URL: postgres://postgres:postgres@db:5432/database?sslmode=disable
+      # It's really not recommended to store define the secret key like this and commit it
+      # Since the db password also committed and for the sake of simplicity, forgive me for doing this
+      JWT_SECRET_KEY: not-so-secret-key
     depends_on:
       db:
         condition: service_healthy
