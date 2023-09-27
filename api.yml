@@ -66,19 +66,76 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/MultipleErrorResponse"
               examples:
                 error:
                   $ref: "#/components/examples/MultipleErrorGeneralResponse"
+  /user/login:
+    post:
+      tags:
+        - User
+      summary: Sign in user to the service, returning token for accessing other APIs
+      operationId: user-login
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserLoginRequest"
+            examples:
+              valid:
+                $ref: "#/components/examples/UserLoginRequest"
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserLoginResponse"
+              examples:
+                created:
+                  $ref: "#/components/examples/UserLoginResponse"
+        '400':
+          description: Unsuccessful login
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                errors:
+                  $ref: "#/components/examples/ErrorResponse"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                error:
+                  $ref: "#/components/examples/ErrorResponse"
+
 components:
   schemas:
-    HelloResponse:
+    UserLoginRequest:
       type: object
       required:
-        - message
+        - phone_number
+        - password
       properties:
-        message:
+        phone_number:
           type: string
+        password:
+          type: string
+    UserLoginResponse:
+      type: object
+      required:
+        - id
+        - token
+      properties:
+        id:
+          type: string
+        token:
+          type: string
+
     UserRegisterRequest:
       type: object
       required:
@@ -127,16 +184,24 @@ components:
       value:
         phone_number: "+62858778892321"
         full_name: "Sakino Yui"
-        password: "PuniYuiPolarBear!"
+        password: "PuniYuiPolarBear2!"
+    UserLoginRequest:
+      value:
+        phone_number: "+62858778892321"
+        password: "PuniYuiPolarBear2!"
+    UserLoginResponse:
+      value:
+        id: "7b8782ea-19fa-4a70-8893-c425e64a9d16"
+        token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTIzNDU2Nzg5LCJuYW1lIjoiSm9zZXBoIn0.OpOSSw7e485LOP5PrzScxHb7SR6sAOMRckfFwi4rp7o"
     UserRegisterCreatedResponse:
       value:
         id: "7b8782ea-19fa-4a70-8893-c425e64a9d16"
     MultipleErrorValidationResponse:
       value:
         messages:
-          - "Phone numbers must start with the Indonesia country code “+62”"
-          - "Full name must be at least 3 characters"
-          - "Passwords must contain at least 1 capital letter, 1 number, and 1 special character"
+          - "PhoneNumber must not exceed 13 characters."
+          - "FullName must be at least 3 characters long."
+          - "Password must meet password criteria. Minimum 6 characters, maximum 64 characters, containing at least 1 capital characters AND 1 number AND 1 special (non-alpha-numeric) characters."
     MultipleErrorAlreadyCreatedResponse:
       value:
         messages:
@@ -147,4 +212,4 @@ components:
           - "PQ error something"
     ErrorResponse:
       value:
-        message: "PQ error something"
+        message: "something error"
