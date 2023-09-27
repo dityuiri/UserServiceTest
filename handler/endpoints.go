@@ -2,10 +2,8 @@ package handler
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"golang.org/x/crypto/bcrypt"
@@ -56,7 +54,7 @@ func (s *Server) UserRegister(ctx echo.Context) error {
 		// Normal case is when user isn't exist in the database
 		if err == common.ErrUserNotFound {
 			// Hash and Salt the password
-			hashedPassword, err := s.hashPassword(req.Password)
+			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 			if err != nil {
 				ctx.Logger().Errorf("hashPassword error: %s", err.Error())
 				return ctx.JSON(http.StatusInternalServerError, generated.MultipleErrorResponse{
@@ -69,7 +67,7 @@ func (s *Server) UserRegister(ctx echo.Context) error {
 				Id:          uuid.New(),
 				PhoneNumber: req.PhoneNumber,
 				Name:        req.FullName,
-				Password:    hashedPassword,
+				Password:    string(hashedPassword),
 			}
 
 			err = s.Repository.InsertUser(standardCtx, insertUserInput)
@@ -149,7 +147,7 @@ func (s *Server) UserLogin(ctx echo.Context) error {
 	}
 
 	// Generate JWT token
-	token, err := s.generateJWTToken(user)
+	token, err := s.generateJWTToken(user.Id.String())
 	if err != nil {
 		ctx.Logger().Errorf("generateJWTToken error: %s", err.Error())
 		return ctx.JSON(http.StatusInternalServerError, generated.ErrorResponse{
@@ -174,32 +172,4 @@ func (s *Server) UserLogin(ctx echo.Context) error {
 	resp.Id = user.Id.String()
 	resp.Token = token
 	return ctx.JSON(http.StatusOK, resp)
-}
-
-func (s *Server) hashPassword(pass string) (string, error) {
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(pass), bcrypt.DefaultCost)
-	if err != nil {
-		return "", err
-	}
-
-	return string(hashedPassword), nil
-}
-
-func (s *Server) generateJWTToken(user repository.GetUserByPhoneNumberOutput) (string, error) {
-	// By default, set the expiration time for 3 minutes
-	expirationTime := time.Now().Add(3 * time.Minute)
-	claims := &jwt.MapClaims{
-		"Id": user.Id.String(),
-		"RegisteredClaims": jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(expirationTime),
-		},
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(s.JWTSecretKey))
-	if err != nil {
-		return "", err
-	}
-
-	return tokenString, nil
 }

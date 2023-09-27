@@ -86,7 +86,7 @@ paths:
                 $ref: "#/components/examples/UserLoginRequest"
       responses:
         '200':
-          description: User successfully login
+          description: User successfully logged in
           content:
             application/json:
               schema:
@@ -112,9 +112,61 @@ paths:
               examples:
                 error:
                   $ref: "#/components/examples/ErrorResponse"
+  /user/profile:
+    get:
+      tags:
+        - User
+      summary: Get user profile based on provided token
+      operationId: get-user-profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Get user profile success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetUserProfileResponse"
+              examples:
+                created:
+                  $ref: "#/components/examples/GetUserProfileResponse"
+        '403':
+          description: Forbidden code due to unauthorized token access
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                errors:
+                  $ref: "#/components/examples/ErrorResponse"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                error:
+                  $ref: "#/components/examples/ErrorResponse"
+
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
+    GetUserProfileResponse:
+      type: object
+      required:
+        - name
+        - phone_number
+      properties:
+        name:
+          type: string
+        phone_number:
+          type: string
     UserLoginRequest:
       type: object
       required:
@@ -183,6 +235,10 @@ components:
             type: string
 
   examples:
+    GetUserProfileResponse:
+      value:
+        phone_number: "+62858778892321"
+        name: "Sakino Yui"
     UserRegisterRequest:
       value:
         phone_number: "+62858778892321"
