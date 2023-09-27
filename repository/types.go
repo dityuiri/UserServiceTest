@@ -1,7 +1,10 @@
 // This file contains types that are used in the repository layer.
 package repository
 
-import "github.com/google/uuid"
+import (
+	"database/sql"
+	"github.com/google/uuid"
+)
 
 type InsertUserInput struct {
 	Id          uuid.UUID
@@ -18,10 +21,10 @@ type GetUserByPhoneNumberOutput struct {
 	Id                   uuid.UUID
 	Name                 string
 	Password             string
-	NumOfSuccessfulLogin int
+	NumOfSuccessfulLogin sql.NullInt32
 }
 
-type UpdateUserLoginInput struct {
+type UpsertUserLoginInput struct {
 	UserId               uuid.UUID
-	NumOfSuccessfulLogin int
+	NumOfSuccessfulLogin int32
 }

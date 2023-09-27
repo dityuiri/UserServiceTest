@@ -63,16 +63,16 @@ func (mr *MockRepositoryInterfaceMockRecorder) InsertUser(ctx, input interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertUser", reflect.TypeOf((*MockRepositoryInterface)(nil).InsertUser), ctx, input)
 }
 
-// UpdateUserLogin mocks base method.
-func (m *MockRepositoryInterface) UpdateUserLogin(ctx context.Context, input UpdateUserLoginInput) error {
+// UpsertUserLogin mocks base method.
+func (m *MockRepositoryInterface) UpsertUserLogin(ctx context.Context, input UpsertUserLoginInput) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateUserLogin", ctx, input)
+	ret := m.ctrl.Call(m, "UpsertUserLogin", ctx, input)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// UpdateUserLogin indicates an expected call of UpdateUserLogin.
-func (mr *MockRepositoryInterfaceMockRecorder) UpdateUserLogin(ctx, input interface{}) *gomock.Call {
+// UpsertUserLogin indicates an expected call of UpsertUserLogin.
+func (mr *MockRepositoryInterfaceMockRecorder) UpsertUserLogin(ctx, input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateUserLogin", reflect.TypeOf((*MockRepositoryInterface)(nil).UpdateUserLogin), ctx, input)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertUserLogin", reflect.TypeOf((*MockRepositoryInterface)(nil).UpsertUserLogin), ctx, input)
 }

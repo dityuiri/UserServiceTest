@@ -90,6 +90,81 @@ func (s *Server) UserRegister(ctx echo.Context) error {
 	})
 }
 
+// UserLogin : POST /user/login
+func (s *Server) UserLogin(ctx echo.Context) error {
+	var (
+		req  generated.UserLoginRequest
+		resp generated.UserLoginResponse
+
+		standardCtx = ctx.Request().Context()
+	)
+
+	// Retrieve request body
+	if err := ctx.Bind(&req); err != nil {
+		return ctx.JSON(http.StatusBadRequest, generated.ErrorResponse{
+			Message: "Invalid request body",
+		})
+	}
+
+	// Required field validation
+	err := ctx.Validate(req)
+	if err != nil {
+		return ctx.JSON(http.StatusBadRequest, generated.ErrorResponse{
+			Message: "PhoneNumber and Password are mandatory",
+		})
+	}
+
+	// Get user to compare the password
+	getUserInput := repository.GetUserByPhoneNumberInput{PhoneNumber: req.PhoneNumber}
+	user, err := s.Repository.GetUserByPhoneNumber(standardCtx, getUserInput)
+	if err != nil {
+		if err == common.ErrUserNotFound {
+			// Case when user not found
+			return ctx.JSON(http.StatusBadRequest, generated.ErrorResponse{
+				Message: err.Error(),
+			})
+		}
+
+		ctx.Logger().Errorf("GetUserLogin error: %s", err.Error())
+		return ctx.JSON(http.StatusInternalServerError, generated.ErrorResponse{
+			Message: err.Error(),
+		})
+	}
+
+	// Compare supplied password with the user password
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password))
+	if err != nil {
+		if err == bcrypt.ErrMismatchedHashAndPassword {
+			return ctx.JSON(http.StatusBadRequest, generated.ErrorResponse{
+				Message: "Mismatched password",
+			})
+		}
+
+		ctx.Logger().Errorf("CompareHashAndPassword error: %s", err.Error())
+		return ctx.JSON(http.StatusInternalServerError, generated.ErrorResponse{
+			Message: err.Error(),
+		})
+	}
+
+	// Increment successful login
+	updateUserLoginInput := repository.UpsertUserLoginInput{
+		UserId:               user.Id,
+		NumOfSuccessfulLogin: user.NumOfSuccessfulLogin.Int32 + 1,
+	}
+
+	err = s.Repository.UpsertUserLogin(standardCtx, updateUserLoginInput)
+	if err != nil {
+		ctx.Logger().Errorf("UpdateUserLogin error: %s", err.Error())
+		return ctx.JSON(http.StatusInternalServerError, generated.ErrorResponse{
+			Message: err.Error(),
+		})
+	}
+
+	// TODO: Implement JWT token
+	resp.Id = user.Id.String()
+	return ctx.JSON(http.StatusOK, resp)
+}
+
 func (s *Server) hashPassword(pass string) (string, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(pass), bcrypt.DefaultCost)
 	if err != nil {

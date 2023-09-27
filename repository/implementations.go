@@ -9,9 +9,9 @@ import (
 
 func (r *Repository) GetUserByPhoneNumber(ctx context.Context, input GetUserByPhoneNumberInput) (output GetUserByPhoneNumberOutput, err error) {
 	var query = `
-	SELECT um.id, um.name, um.password, ul.successful_login 
+	SELECT um.id, um.name, um.password_hash, ul.successful_login 
 	FROM user_master um 
-	INNER JOIN user_login ul ON um.id = ul.user_id
+	LEFT JOIN user_login ul ON um.id = ul.user_id
 	WHERE um.phone_number = $1`
 
 	err = r.Db.QueryRowContext(ctx, query, input.PhoneNumber).Scan(&output.Id, &output.Name, &output.Password, &output.NumOfSuccessfulLogin)
@@ -38,13 +38,13 @@ func (r *Repository) InsertUser(ctx context.Context, input InsertUserInput) (err
 	return
 }
 
-func (r *Repository) UpdateUserLogin(ctx context.Context, input UpdateUserLoginInput) (err error) {
+func (r *Repository) UpsertUserLogin(ctx context.Context, input UpsertUserLoginInput) (err error) {
 	var query = `
-		UPDATE user_login
-		SET
-			successful_login = $2, last_login_at = NOW()
-		WHERE
-			user_id = $1
+		INSERT INTO user_login (user_id, successful_login, last_login_at)
+		VALUES ($1, $2, NOW())
+		ON CONFLICT (user_id)
+		DO UPDATE
+		SET successful_login = EXCLUDED.successful_login, last_login_at = EXCLUDED.last_login_at
 	`
 
 	_, err = r.Db.ExecContext(ctx, query, input.UserId, input.NumOfSuccessfulLogin)

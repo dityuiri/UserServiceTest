@@ -28,8 +28,8 @@ func TestRepository_GetUserByPhoneNumber(t *testing.T) {
 
 	ctx := context.Background()
 	repo := &Repository{Db: db}
-	expectedQuery := "SELECT um.id, um.name, um.password, ul.successful_login FROM user_master um " +
-		"INNER JOIN user_login ul ON um.id = ul.user_id WHERE um.phone_number = (.+)"
+	expectedQuery := "SELECT um.id, um.name, um.password_hash, ul.successful_login FROM user_master um " +
+		"LEFT JOIN user_login ul ON um.id = ul.user_id WHERE um.phone_number = (.+)"
 
 	t.Run("positive", func(t *testing.T) {
 		var (
@@ -152,11 +152,11 @@ func TestRepository_UpdateUserLogin(t *testing.T) {
 
 	ctx := context.Background()
 	repo := &Repository{Db: db}
-	expectedQuery := "UPDATE user_login (.+)"
+	expectedQuery := "INSERT INTO user_login (.+)"
 
 	t.Run("positive", func(t *testing.T) {
 		var (
-			input = UpdateUserLoginInput{
+			input = UpsertUserLoginInput{
 				UserId:               uuid.New(),
 				NumOfSuccessfulLogin: 1,
 			}
@@ -166,13 +166,13 @@ func TestRepository_UpdateUserLogin(t *testing.T) {
 			WithArgs(input.UserId, input.NumOfSuccessfulLogin).
 			WillReturnResult(sqlmock.NewResult(1, 1))
 
-		err := repo.UpdateUserLogin(ctx, input)
+		err := repo.UpsertUserLogin(ctx, input)
 		assert.Nil(t, err)
 	})
 
 	t.Run("exec context returns error", func(t *testing.T) {
 		var (
-			input = UpdateUserLoginInput{
+			input = UpsertUserLoginInput{
 				UserId:               uuid.New(),
 				NumOfSuccessfulLogin: 1,
 			}
@@ -182,7 +182,7 @@ func TestRepository_UpdateUserLogin(t *testing.T) {
 			WithArgs(input.UserId, input.NumOfSuccessfulLogin).
 			WillReturnError(errors.New("error"))
 
-		err := repo.UpdateUserLogin(ctx, input)
+		err := repo.UpsertUserLogin(ctx, input)
 		assert.EqualError(t, err, "error")
 	})
 }

@@ -85,8 +85,8 @@ paths:
               valid:
                 $ref: "#/components/examples/UserLoginRequest"
       responses:
-        '201':
-          description: User created
+        '200':
+          description: User successfully login
           content:
             application/json:
               schema:
