@@ -38,3 +38,9 @@ type UpsertUserLoginInput struct {
 	UserId               uuid.UUID
 	NumOfSuccessfulLogin int32
 }
+
+type UpdateUserInput struct {
+	Id          string
+	PhoneNumber string
+	Name        string
+}

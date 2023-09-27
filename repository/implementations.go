@@ -69,3 +69,16 @@ func (r *Repository) UpsertUserLogin(ctx context.Context, input UpsertUserLoginI
 	_, err = r.Db.ExecContext(ctx, query, input.UserId, input.NumOfSuccessfulLogin)
 	return
 }
+
+func (r *Repository) UpdateUser(ctx context.Context, input UpdateUserInput) (err error) {
+	var query = `
+		UPDATE user_master
+		SET
+			phone_number = $2, name = $3
+		WHERE	
+			id = $1
+	`
+	_, err = r.Db.ExecContext(ctx, query, input.Id, input.PhoneNumber, input.Name)
+	return
+
+}

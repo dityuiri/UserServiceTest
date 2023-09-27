@@ -137,7 +137,7 @@ func TestRepository_InsertUser(t *testing.T) {
 	})
 }
 
-func TestRepository_UpdateUserLogin(t *testing.T) {
+func TestRepository_UpsertUserLogin(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	if err != nil {
 		t.Fatalf("Error creating mock database: %v", err)
@@ -257,5 +257,57 @@ func TestRepository_GetUserById(t *testing.T) {
 		output, err := repo.GetUserById(ctx, input)
 		assert.EqualError(t, err, "error")
 		assert.Empty(t, output)
+	})
+}
+
+func TestRepository_UpdateUser(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("Error creating mock database: %v", err)
+	}
+
+	defer func(db *sql.DB) {
+		err := db.Close()
+		if err != nil {
+
+		}
+	}(db)
+
+	ctx := context.Background()
+	repo := &Repository{Db: db}
+	expectedQuery := "UPDATE user_master (.+)"
+
+	t.Run("positive", func(t *testing.T) {
+		var (
+			input = UpdateUserInput{
+				Id:          uuid.New().String(),
+				PhoneNumber: "+628787878",
+				Name:        "Ruru's Mirapas",
+			}
+		)
+
+		mock.ExpectExec(expectedQuery).
+			WithArgs(input.Id, input.PhoneNumber, input.Name).
+			WillReturnResult(sqlmock.NewResult(1, 1))
+
+		err := repo.UpdateUser(ctx, input)
+		assert.Nil(t, err)
+	})
+
+	t.Run("exec context returns error", func(t *testing.T) {
+		var (
+			input = UpdateUserInput{
+				Id:          uuid.New().String(),
+				PhoneNumber: "+628787878",
+				Name:        "Ruru's Mirapas",
+			}
+		)
+
+		mock.ExpectExec(expectedQuery).
+			WithArgs(input.Id, input.PhoneNumber, input.Name).
+			WillReturnError(errors.New("error"))
+
+		err := repo.UpdateUser(ctx, input)
+		assert.EqualError(t, err, "error")
 	})
 }
