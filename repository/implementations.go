@@ -26,6 +26,25 @@ func (r *Repository) GetUserByPhoneNumber(ctx context.Context, input GetUserByPh
 	return
 }
 
+func (r *Repository) GetUserById(ctx context.Context, input GetUserByIdInput) (output GetUserByIdOutput, err error) {
+	var query = `
+		SELECT id, name, phone_number
+		FROM user_master
+		WHERE id = $1
+	`
+
+	err = r.Db.QueryRowContext(ctx, query, input.Id).Scan(&output.Id, &output.Name, &output.PhoneNumber)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return output, common.ErrUserNotFound
+		}
+
+		return
+	}
+
+	return
+}
+
 func (r *Repository) InsertUser(ctx context.Context, input InsertUserInput) (err error) {
 	var query = `
 		INSERT INTO user_master

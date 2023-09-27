@@ -17,6 +17,16 @@ type GetUserByPhoneNumberInput struct {
 	PhoneNumber string
 }
 
+type GetUserByIdInput struct {
+	Id string
+}
+
+type GetUserByIdOutput struct {
+	Id          uuid.UUID
+	Name        string
+	PhoneNumber string
+}
+
 type GetUserByPhoneNumberOutput struct {
 	Id                   uuid.UUID
 	Name                 string

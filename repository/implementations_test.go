@@ -186,3 +186,76 @@ func TestRepository_UpdateUserLogin(t *testing.T) {
 		assert.EqualError(t, err, "error")
 	})
 }
+
+func TestRepository_GetUserById(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("Error creating mock database: %v", err)
+	}
+
+	defer func(db *sql.DB) {
+		err := db.Close()
+		if err != nil {
+
+		}
+	}(db)
+
+	ctx := context.Background()
+	repo := &Repository{Db: db}
+	expectedQuery := "SELECT id, name, phone_number FROM user_master WHERE id = (.+)"
+
+	t.Run("positive", func(t *testing.T) {
+		var (
+			id    = uuid.New()
+			input = GetUserByIdInput{
+				Id: id.String(),
+			}
+
+			expectedOutput = GetUserByIdOutput{
+				Id:          id,
+				Name:        "Sakino Yui",
+				PhoneNumber: "+6287341234234",
+			}
+		)
+
+		mock.ExpectQuery(expectedQuery).
+			WithArgs(input.Id).WillReturnRows(sqlmock.NewRows([]string{"id", "name",
+			"phone_number"}).AddRow(expectedOutput.Id, expectedOutput.Name, expectedOutput.PhoneNumber))
+
+		output, err := repo.GetUserById(ctx, input)
+		assert.Equal(t, expectedOutput, output)
+		assert.Nil(t, err)
+	})
+
+	t.Run("query row context returns no rows", func(t *testing.T) {
+		var (
+			id    = uuid.New()
+			input = GetUserByIdInput{
+				Id: id.String(),
+			}
+		)
+
+		mock.ExpectQuery(expectedQuery).
+			WithArgs(input.Id).WillReturnError(sql.ErrNoRows)
+
+		output, err := repo.GetUserById(ctx, input)
+		assert.EqualError(t, common.ErrUserNotFound, err.Error())
+		assert.Empty(t, output)
+	})
+
+	t.Run("query row context returns other error", func(t *testing.T) {
+		var (
+			id    = uuid.New()
+			input = GetUserByIdInput{
+				Id: id.String(),
+			}
+		)
+
+		mock.ExpectQuery(expectedQuery).
+			WithArgs(input.Id).WillReturnError(errors.New("error"))
+
+		output, err := repo.GetUserById(ctx, input)
+		assert.EqualError(t, err, "error")
+		assert.Empty(t, output)
+	})
+}
