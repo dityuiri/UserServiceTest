@@ -20,3 +20,8 @@ type GetUserByPhoneNumberOutput struct {
 	Password             string
 	NumOfSuccessfulLogin int
 }
+
+type UpdateUserLoginInput struct {
+	UserId               uuid.UUID
+	NumOfSuccessfulLogin int
+}

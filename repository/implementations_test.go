@@ -136,3 +136,53 @@ func TestRepository_InsertUser(t *testing.T) {
 		assert.EqualError(t, err, "error")
 	})
 }
+
+func TestRepository_UpdateUserLogin(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("Error creating mock database: %v", err)
+	}
+
+	defer func(db *sql.DB) {
+		err := db.Close()
+		if err != nil {
+
+		}
+	}(db)
+
+	ctx := context.Background()
+	repo := &Repository{Db: db}
+	expectedQuery := "UPDATE user_login (.+)"
+
+	t.Run("positive", func(t *testing.T) {
+		var (
+			input = UpdateUserLoginInput{
+				UserId:               uuid.New(),
+				NumOfSuccessfulLogin: 1,
+			}
+		)
+
+		mock.ExpectExec(expectedQuery).
+			WithArgs(input.UserId, input.NumOfSuccessfulLogin).
+			WillReturnResult(sqlmock.NewResult(1, 1))
+
+		err := repo.UpdateUserLogin(ctx, input)
+		assert.Nil(t, err)
+	})
+
+	t.Run("exec context returns error", func(t *testing.T) {
+		var (
+			input = UpdateUserLoginInput{
+				UserId:               uuid.New(),
+				NumOfSuccessfulLogin: 1,
+			}
+		)
+
+		mock.ExpectExec(expectedQuery).
+			WithArgs(input.UserId, input.NumOfSuccessfulLogin).
+			WillReturnError(errors.New("error"))
+
+		err := repo.UpdateUserLogin(ctx, input)
+		assert.EqualError(t, err, "error")
+	})
+}
