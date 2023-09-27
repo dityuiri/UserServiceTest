@@ -28,6 +28,8 @@ func TestRepository_GetUserByPhoneNumber(t *testing.T) {
 
 	ctx := context.Background()
 	repo := &Repository{Db: db}
+	expectedQuery := "SELECT um.id, um.name, um.password, ul.successful_login FROM user_master um " +
+		"INNER JOIN user_login ul ON um.id = ul.user_id WHERE um.phone_number = (.+)"
 
 	t.Run("positive", func(t *testing.T) {
 		var (
@@ -41,8 +43,10 @@ func TestRepository_GetUserByPhoneNumber(t *testing.T) {
 			}
 		)
 
-		mock.ExpectQuery("SELECT id, name FROM user_master WHERE phone_number = (.+)").
-			WithArgs(input.PhoneNumber).WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).AddRow(expectedOutput.Id, expectedOutput.Name))
+		mock.ExpectQuery(expectedQuery).
+			WithArgs(input.PhoneNumber).WillReturnRows(sqlmock.NewRows([]string{"id", "name",
+			"password", "successful_login"}).AddRow(expectedOutput.Id, expectedOutput.Name,
+			expectedOutput.Password, expectedOutput.NumOfSuccessfulLogin))
 
 		output, err := repo.GetUserByPhoneNumber(ctx, input)
 		assert.Equal(t, expectedOutput, output)
@@ -56,7 +60,7 @@ func TestRepository_GetUserByPhoneNumber(t *testing.T) {
 			}
 		)
 
-		mock.ExpectQuery("SELECT id, name FROM user_master WHERE phone_number = (.+)").
+		mock.ExpectQuery(expectedQuery).
 			WithArgs(input.PhoneNumber).WillReturnError(sql.ErrNoRows)
 
 		output, err := repo.GetUserByPhoneNumber(ctx, input)
@@ -71,7 +75,7 @@ func TestRepository_GetUserByPhoneNumber(t *testing.T) {
 			}
 		)
 
-		mock.ExpectQuery("SELECT id, name FROM user_master WHERE phone_number = (.+)").
+		mock.ExpectQuery(expectedQuery).
 			WithArgs(input.PhoneNumber).WillReturnError(errors.New("error"))
 
 		output, err := repo.GetUserByPhoneNumber(ctx, input)

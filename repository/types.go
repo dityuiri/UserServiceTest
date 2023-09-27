@@ -15,6 +15,8 @@ type GetUserByPhoneNumberInput struct {
 }
 
 type GetUserByPhoneNumberOutput struct {
-	Id   uuid.UUID
-	Name string
+	Id                   uuid.UUID
+	Name                 string
+	Password             string
+	NumOfSuccessfulLogin int
 }

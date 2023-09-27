@@ -123,8 +123,12 @@ components:
       properties:
         phone_number:
           type: string
+          x-oapi-codegen-extra-tags:
+            validate: required
         password:
           type: string
+          x-oapi-codegen-extra-tags:
+            validate: required
     UserLoginResponse:
       type: object
       required:
@@ -135,7 +139,6 @@ components:
           type: string
         token:
           type: string
-
     UserRegisterRequest:
       type: object
       required:

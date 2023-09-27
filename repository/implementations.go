@@ -8,9 +8,13 @@ import (
 )
 
 func (r *Repository) GetUserByPhoneNumber(ctx context.Context, input GetUserByPhoneNumberInput) (output GetUserByPhoneNumberOutput, err error) {
-	var query = `SELECT id, name FROM user_master WHERE phone_number = $1`
+	var query = `
+	SELECT um.id, um.name, um.password, ul.successful_login 
+	FROM user_master um 
+	INNER JOIN user_login ul ON um.id = ul.user_id
+	WHERE um.phone_number = $1`
 
-	err = r.Db.QueryRowContext(ctx, query, input.PhoneNumber).Scan(&output.Id, &output.Name)
+	err = r.Db.QueryRowContext(ctx, query, input.PhoneNumber).Scan(&output.Id, &output.Name, &output.Password, &output.NumOfSuccessfulLogin)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return output, common.ErrUserNotFound
